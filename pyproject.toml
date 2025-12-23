@@ -2,8 +2,8 @@
 name = "repo2doc"
 version = "0.1.0"
 description = "基于 LangGraph 的代码库逆向需求文档生成工具"
-readme = "readme.cn.md"
-requires-python = ">=3.11"
+readme = "readme.md"
+requires-python = ">=3.12"
 dependencies = [
     "langgraph>=0.2.0",
     "langchain>=0.3.0",
