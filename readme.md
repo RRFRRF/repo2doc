@@ -126,6 +126,8 @@ uv run python main.py /path/to/repo -c config.yaml
 
 # 显示详细日志
 uv run python main.py /path/to/repo -v
+
+uv run python main.py C:\Users\11951\OneDrive\Desktop\AppCloning\repo2doc\spring-petclinic -v
 ```
 
 ### Python API

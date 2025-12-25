@@ -52,8 +52,8 @@ file_filter:
 
 # LLM 配置
 llm:
-  # 模型名称
-  model: "qwen3-max"
+  # 模型名称（可选，优先env）
+  # model: "qwen3-max"
   
   # 温度参数
   temperature: 0.3
