@@ -47,6 +47,14 @@ def generate_doc(state: Repo2DocState, config: Config) -> Repo2DocState:
     current_document = state.get("current_document", "")
     intermediate_documents = state.get("intermediate_documents", [])
     
+    # 初始化或获取 LLM 使用量统计
+    llm_usage = state.get("llm_usage", {
+        "total_prompt_tokens": 0,
+        "total_completion_tokens": 0,
+        "total_tokens": 0,
+        "calls": []
+    })
+    
     # 逐块处理
     for i, chunk in enumerate(chunks):
         chunk_index = i + 1
@@ -58,14 +66,26 @@ def generate_doc(state: Repo2DocState, config: Config) -> Repo2DocState:
         try:
             if i == 0:
                 # 第一个块：使用系统提示
-                new_document = _generate_first_chunk(
+                new_document, usage = _generate_first_chunk(
                     llm, chunk, chunk_index, total_chunks, config
                 )
             else:
                 # 后续块：增量更新
-                new_document = _generate_next_chunk(
+                new_document, usage = _generate_next_chunk(
                     llm, chunk, chunk_index, total_chunks, current_document, config
                 )
+            
+            # 记录 token 使用量
+            if usage:
+                llm_usage["total_prompt_tokens"] += usage.get("prompt_tokens", 0)
+                llm_usage["total_completion_tokens"] += usage.get("completion_tokens", 0)
+                llm_usage["total_tokens"] += usage.get("total_tokens", 0)
+                llm_usage["calls"].append({
+                    "chunk_index": chunk_index,
+                    "prompt_tokens": usage.get("prompt_tokens", 0),
+                    "completion_tokens": usage.get("completion_tokens", 0),
+                    "total_tokens": usage.get("total_tokens", 0)
+                })
             
             # 更新当前文档
             current_document = new_document
@@ -83,9 +103,11 @@ def generate_doc(state: Repo2DocState, config: Config) -> Repo2DocState:
     state["current_document"] = current_document
     state["intermediate_documents"] = intermediate_documents
     state["processed_chunks"] = len(chunks)
+    state["llm_usage"] = llm_usage
     state["status"] = "generated"
     
     logger.info(f"文档生成完成，共处理 {len(chunks)} 个块")
+    logger.info(f"LLM token 使用: prompt={llm_usage['total_prompt_tokens']}, completion={llm_usage['total_completion_tokens']}, total={llm_usage['total_tokens']}")
     
     return state
 
@@ -120,7 +142,7 @@ def _generate_first_chunk(
     chunk_index: int,
     total_chunks: int,
     config: Config
-) -> str:
+) -> tuple[str, dict]:
     """
     生成第一个块的文档
     
@@ -132,7 +154,7 @@ def _generate_first_chunk(
         config: 配置对象
     
     Returns:
-        生成的文档
+        (生成的文档, token使用量)
     """
     # 构建消息
     messages = [
@@ -147,7 +169,17 @@ def _generate_first_chunk(
     # 调用 LLM
     response = llm.invoke(messages)
     
-    return response.content
+    # 提取 token 使用量
+    usage = {}
+    if hasattr(response, 'response_metadata') and response.response_metadata:
+        token_usage = response.response_metadata.get('token_usage', {})
+        usage = {
+            "prompt_tokens": token_usage.get('prompt_tokens', 0),
+            "completion_tokens": token_usage.get('completion_tokens', 0),
+            "total_tokens": token_usage.get('total_tokens', 0)
+        }
+    
+    return response.content, usage
 
 
 def _generate_next_chunk(
@@ -157,7 +189,7 @@ def _generate_next_chunk(
     total_chunks: int,
     previous_document: str,
     config: Config
-) -> str:
+) -> tuple[str, dict]:
     """
     增量更新文档
     
@@ -170,7 +202,7 @@ def _generate_next_chunk(
         config: 配置对象
     
     Returns:
-        更新后的文档
+        (更新后的文档, token使用量)
     """
     # 构建消息
     messages = [
@@ -187,4 +219,14 @@ def _generate_next_chunk(
     # 调用 LLM
     response = llm.invoke(messages)
     
-    return response.content
+    # 提取 token 使用量
+    usage = {}
+    if hasattr(response, 'response_metadata') and response.response_metadata:
+        token_usage = response.response_metadata.get('token_usage', {})
+        usage = {
+            "prompt_tokens": token_usage.get('prompt_tokens', 0),
+            "completion_tokens": token_usage.get('completion_tokens', 0),
+            "total_tokens": token_usage.get('total_tokens', 0)
+        }
+    
+    return response.content, usage

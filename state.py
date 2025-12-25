@@ -58,8 +58,11 @@ class Repo2DocState(TypedDict):
     
     # 统计信息
     total_files: int                        # 总文件数
-    total_tokens: int                       # 总 Token 数
+    total_tokens: int                       # 总 Token 数（输入文件）
     processed_chunks: int                   # 已处理的块数
+    
+    # LLM 使用量统计（真实值）
+    llm_usage: dict                         # LLM token 使用量
 
 
 def create_initial_state(repo_path: str, config_path: Optional[str] = None) -> Repo2DocState:
@@ -88,4 +91,10 @@ def create_initial_state(repo_path: str, config_path: Optional[str] = None) -> R
         total_files=0,
         total_tokens=0,
         processed_chunks=0,
+        llm_usage={
+            "total_prompt_tokens": 0,
+            "total_completion_tokens": 0,
+            "total_tokens": 0,
+            "calls": []
+        },
     )

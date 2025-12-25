@@ -73,6 +73,14 @@ def save_output(state: Repo2DocState, config: Config) -> Repo2DocState:
     _save_file(report_file, report)
     logger.info(f"处理报告已保存: {report_file}")
     
+    # 保存 JSON 统计信息
+    stats = _generate_stats_json(state, config, timestamp)
+    stats_file = output_dir / f"{timestamp}_stats.json"
+    import json
+    with open(stats_file, "w", encoding="utf-8") as f:
+        json.dump(stats, f, ensure_ascii=False, indent=2)
+    logger.info(f"统计信息已保存: {stats_file}")
+    
     # 更新状态
     state["status"] = "completed"
     
@@ -163,3 +171,61 @@ def _generate_report(state: Repo2DocState, config: Config) -> str:
     ])
     
     return "\n".join(report_lines)
+
+
+def _generate_stats_json(state: Repo2DocState, config: Config, timestamp: str) -> dict:
+    """
+    生成 JSON 格式的统计信息
+    
+    Args:
+        state: 当前状态
+        config: 配置对象
+        timestamp: 时间戳
+    
+    Returns:
+        统计信息字典
+    """
+    chunks = state.get("chunks", [])
+    filtered_files = state.get("filtered_files", [])
+    llm_usage = state.get("llm_usage", {})
+    
+    # 统计文件类型
+    extension_counts = {}
+    for file_info in filtered_files:
+        ext = file_info.extension
+        extension_counts[ext] = extension_counts.get(ext, 0) + 1
+    
+    return {
+        "meta": {
+            "timestamp": timestamp,
+            "generated_at": datetime.now().isoformat(),
+            "repo_path": state["repo_path"],
+            "tool": "repo2doc",
+            "version": "0.1.0"
+        },
+        "execution": {
+            "total_iterations": state.get("processed_chunks", 0),
+            "llm_calls": len(llm_usage.get("calls", [])),
+            "is_complete": state.get("status") == "completed",
+        },
+        "llm_tokens": {
+            "total_prompt_tokens": llm_usage.get("total_prompt_tokens", 0),
+            "total_completion_tokens": llm_usage.get("total_completion_tokens", 0),
+            "total_tokens": llm_usage.get("total_tokens", 0),
+            "calls": llm_usage.get("calls", []),
+        },
+        "files": {
+            "total_scanned": state.get("total_files", 0),
+            "total_filtered": len(filtered_files),
+            "by_extension": extension_counts,
+        },
+        "document": {
+            "final_length": len(state.get("current_document", "")),
+            "versions_count": len(state.get("intermediate_documents", [])),
+        },
+        "config": {
+            "model": config.llm.model,
+            "temperature": config.llm.temperature,
+            "max_input_tokens": config.llm.max_input_tokens,
+        }
+    }

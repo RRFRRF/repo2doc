@@ -1,93 +1,94 @@
 # Repo2Doc
 
-基于 LangGraph 的代码库逆向需求文档生成工具。
+A LangGraph-based tool for reverse-engineering requirements documentation from codebases.
 
-## 概述
+## Overview
 
-Repo2Doc 是一个使用大语言模型（LLM）从代码库自动生成需求规格说明书的工具。它借鉴了 [swark](https://github.com/swark-io/swark) 的设计思想，实现了文件筛选、代码分块、增量式文档生成等功能。
+Repo2Doc is a tool that uses Large Language Models (LLMs) to automatically generate requirements specification documents from code repositories. It draws inspiration from [swark](https://github.com/swark-io/swark)'s design philosophy, implementing features like file filtering, code chunking, and incremental document generation.
 
-### 核心特性
+### Key Features
 
-- 🔍 **智能文件筛选**：支持按扩展名包含、按模式排除
-- 📦 **自动分块**：根据 LLM token 限制自动分块
-- 🔄 **增量式生成**：每个块生成后与之前的文档合并
-- 📊 **详细报告**：生成处理报告和中间结果
-- ⚙️ **灵活配置**：支持 YAML 配置文件
+- 🔍 **Smart File Filtering**: Support for extension-based inclusion and pattern-based exclusion
+- 📦 **Auto Chunking**: Automatic chunking based on LLM token limits
+- 🔄 **Incremental Generation**: Each chunk's output is merged with the previous document
+- 📊 **Detailed Reports**: Generates processing reports and intermediate results
+- ⚙️ **Flexible Configuration**: YAML configuration file support
 
-## 工作流程
+## Workflow
 
 ```
 ┌─────────────────┐
-│   输入仓库路径   │
+│   Input Repo    │
+│      Path       │
 └────────┬────────┘
          │
          ▼
 ┌─────────────────┐
-│  1. 扫描文件    │  扫描目录，获取所有文件
+│  1. Scan Files  │  Scan directory, get all files
 └────────┬────────┘
          │
          ▼
 ┌─────────────────┐
-│  2. 筛选文件    │  按扩展名和排除规则筛选
+│ 2. Filter Files │  Filter by extension and exclude patterns
 └────────┬────────┘
          │
          ▼
 ┌─────────────────┐
-│  3. 分块文件    │  按 token 限制分块
+│ 3. Chunk Files  │  Chunk by token limit
 └────────┬────────┘
          │
          ▼
 ┌─────────────────┐
-│  4. 生成文档    │  LLM 增量式生成
-│    (循环处理)   │
+│ 4. Generate Doc │  LLM incremental generation
+│    (loop)       │
 └────────┬────────┘
          │
          ▼
 ┌─────────────────┐
-│  5. 保存输出    │  保存文档和报告
+│ 5. Save Output  │  Save document and report
 └─────────────────┘
 ```
 
-## 安装
+## Installation
 
-### 使用 uv（推荐）
+### Using uv (Recommended)
 
 ```bash
 cd repo2doc
 uv sync
 ```
 
-### 使用 pip
+### Using pip
 
 ```bash
 pip install -e .
 ```
 
-## 配置
+## Configuration
 
-### 环境变量
+### Environment Variables
 
-创建 `.env` 文件：
+Create a `.env` file:
 
 ```bash
 cp .env.example .env
 ```
 
-编辑 `.env` 文件，设置 API 密钥：
+Edit the `.env` file to set your API key:
 
 ```bash
 OPENAI_API_KEY="your-api-key-here"
 
-# 可选：自定义 API 基础 URL
+# Optional: Custom API base URL
 # OPENAI_BASE_URL="https://api.openai.com/v1"
 ```
 
-### 配置文件
+### Configuration File
 
-编辑 `config.yaml` 自定义配置：
+Edit `config.yaml` to customize settings:
 
 ```yaml
-# 文件筛选配置
+# File filter configuration
 file_filter:
   include_extensions:
     - ".py"
@@ -99,35 +100,33 @@ file_filter:
   max_file_size: 102400  # 100KB
   max_files: 500
 
-# LLM 配置
+# LLM configuration
 llm:
   model: "gpt-4o"
   temperature: 0.3
   max_input_tokens: 100000
   reserved_tokens: 10000
 
-# 输出配置
+# Output configuration
 output:
   output_dir: "./repo2doc-output"
   filename: "requirements.md"
   save_intermediate: true
 ```
 
-## 使用方法
+## Usage
 
-### 命令行
+### Command Line
 
 ```bash
-# 使用默认配置
+# Use default configuration
 uv run python main.py /path/to/repo
 
-# 使用自定义配置
+# Use custom configuration
 uv run python main.py /path/to/repo -c config.yaml
 
-# 显示详细日志
+# Show verbose logs
 uv run python main.py /path/to/repo -v
-
-uv run python main.py C:\Users\11951\OneDrive\Desktop\AppCloning\repo2doc\spring-petclinic -v
 ```
 
 ### Python API
@@ -135,104 +134,104 @@ uv run python main.py C:\Users\11951\OneDrive\Desktop\AppCloning\repo2doc\spring
 ```python
 from llm_workflow import run_workflow
 
-# 运行工作流
+# Run workflow
 final_state = run_workflow(
     repo_path="/path/to/repo",
     config_path="config.yaml"
 )
 
-# 检查结果
+# Check result
 if final_state["status"] == "completed":
-    print("文档生成成功！")
-    print(f"输出文件: {final_state['current_document'][:500]}...")
+    print("Document generated successfully!")
+    print(f"Output: {final_state['current_document'][:500]}...")
 else:
-    print(f"生成失败: {final_state['error']}")
+    print(f"Generation failed: {final_state['error']}")
 ```
 
-## 输出
+## Output
 
-运行后会在仓库目录下生成 `repo2doc-output/` 文件夹：
+After running, a `repo2doc-output/` folder will be created in the repository directory:
 
 ```
 repo2doc-output/
-├── requirements.md           # 最终需求文档
-├── 2024-01-01_12-00-00_requirements.md  # 带时间戳的备份
-├── 2024-01-01_12-00-00_report.md        # 处理报告
-└── intermediate/             # 中间结果（如果启用）
+├── requirements.md           # Final requirements document
+├── 2024-01-01_12-00-00_requirements.md  # Timestamped backup
+├── 2024-01-01_12-00-00_report.md        # Processing report
+└── intermediate/             # Intermediate results (if enabled)
     ├── chunk_1.md
     ├── chunk_2.md
     └── ...
 ```
 
-## 项目结构
+## Project Structure
 
 ```
 repo2doc/
-├── main.py              # 主入口
-├── llm_workflow.py      # LangGraph 工作流定义
-├── state.py             # 状态管理
-├── config_loader.py     # 配置加载器
-├── config.yaml          # 默认配置
-├── nodes/               # 工作流节点
+├── main.py              # Main entry point
+├── llm_workflow.py      # LangGraph workflow definition
+├── state.py             # State management
+├── config_loader.py     # Configuration loader
+├── config.yaml          # Default configuration
+├── nodes/               # Workflow nodes
 │   ├── node1_scan_files.py
 │   ├── node2_filter_files.py
 │   ├── node3_chunk_files.py
 │   ├── node4_generate_doc.py
 │   └── node5_save_output.py
-├── utils/               # 工具函数
+├── utils/               # Utility functions
 │   ├── token_counter.py
 │   └── file_utils.py
-├── tests/               # 测试
+├── tests/               # Tests
 │   └── test_workflow.py
-├── pyproject.toml       # 项目配置
-├── .env.example         # 环境变量示例
-├── readme.cn.md         # 中文文档
-└── readme.en.md         # 英文文档
+├── pyproject.toml       # Project configuration
+├── .env.example         # Environment variables example
+├── readme.cn.md         # Chinese documentation
+└── readme.en.md         # English documentation
 ```
 
-## 技术原理
+## Technical Principles
 
-### 增量式文档生成
+### Incremental Document Generation
 
-由于代码库可能超过 LLM 的上下文限制，Repo2Doc 采用增量式生成策略：
+Since codebases may exceed LLM context limits, Repo2Doc uses an incremental generation strategy:
 
-1. **首次生成**：使用第一个代码块生成初始文档
-2. **增量更新**：后续代码块与之前的文档一起输入 LLM
-3. **合并策略**：LLM 将新发现的功能合并到现有文档中
+1. **Initial Generation**: Generate initial document using the first code chunk
+2. **Incremental Update**: Subsequent chunks are input to LLM along with the previous document
+3. **Merge Strategy**: LLM merges newly discovered features into the existing document
 
 ```
-块 1 → 文档 v1
-块 2 + 文档 v1 → 文档 v2
-块 3 + 文档 v2 → 文档 v3
+Chunk 1 → Document v1
+Chunk 2 + Document v1 → Document v2
+Chunk 3 + Document v2 → Document v3
 ...
-块 N + 文档 v(N-1) → 最终文档
+Chunk N + Document v(N-1) → Final Document
 ```
 
-### 分块策略
+### Chunking Strategy
 
 ```python
-# 计算每个块的最大 token 数
+# Calculate max tokens per chunk
 max_tokens_per_chunk = max_input_tokens - reserved_tokens
 
-# 按顺序将文件添加到当前块
+# Add files to current chunk sequentially
 for file in files:
     if current_tokens + file_tokens > max_tokens_per_chunk:
-        # 创建新块
+        # Create new chunk
         save_current_chunk()
         start_new_chunk()
     add_file_to_chunk(file)
 ```
 
-## 与 swark 的对比
+## Comparison with swark
 
-| 特性 | Repo2Doc | swark |
-|------|----------|-------|
-| **输出类型** | 需求文档 | 架构图 |
-| **LLM 框架** | LangGraph | VS Code API |
-| **分块策略** | 增量式更新 | 截断 |
-| **文件筛选** | 类似 | 类似 |
-| **运行环境** | 命令行/Python | VS Code 扩展 |
+| Feature | Repo2Doc | swark |
+|---------|----------|-------|
+| **Output Type** | Requirements Doc | Architecture Diagram |
+| **LLM Framework** | LangGraph | VS Code API |
+| **Chunking Strategy** | Incremental Update | Truncation |
+| **File Filtering** | Similar | Similar |
+| **Runtime Environment** | CLI/Python | VS Code Extension |
 
-## 许可证
+## License
 
 MIT License
