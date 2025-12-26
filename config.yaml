@@ -4,6 +4,7 @@
 file_filter:
   # 包含的文件扩展名
   include_extensions:
+    - ".md"
     - ".py"
     - ".js"
     - ".jsx"
@@ -58,8 +59,8 @@ llm:
   # 温度参数
   temperature: 0.3
   
-  # 最大输入 token 数（用于分块）
-  max_input_tokens: 500000
+  # 最大输入 token 数（qwen3-max 限制为 258048，设置为 200000 留余量）
+  max_input_tokens: 200000
   
   # 每个代码块预留的 token 数（用于 prompt 和输出）
   reserved_tokens: 10000
